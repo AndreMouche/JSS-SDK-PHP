@@ -29,7 +29,7 @@ class JSSRequest {
 	protected $conn;
 	protected $jssresponse;
 	protected $needheader = true;
-	protected $host = 'http://storage.jcloud.com';
+	protected $host = '';
 	protected $path;
 	const user_agent = DEFAULT_USER_AGENT;
 	protected $request_header_map = array(
@@ -61,8 +61,11 @@ class JSSRequest {
 	protected $last_curl_error;
 	
     
-    public function JSSRequest(){
+    public function JSSRequest($host = ""){
     	$this->debug = defined('DEBUG') ? DEBUG : false;
+    	if(!empty($host)) {
+    		$this->host = $host;
+    	}
     	return $this;
     }
 	 /**

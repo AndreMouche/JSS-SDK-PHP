@@ -75,6 +75,8 @@ class JingdongStorageService {
 	 * @access protected
 	 */
 	protected $debug;
+	
+	protected $host = 'http://storage.jcloud.com';
 	   
 
 	/**
@@ -127,7 +129,14 @@ class JingdongStorageService {
 		$this->debug = ($flag === true);
 		return $this;
 	}
-
+	
+	public function set_host($host){
+		$this->host = $host;
+	}
+	
+	public function get_host(){
+		return $this->host;
+	}
 
 	/**
 	 * Get all buckets,corresponds to "GET Service" in API
@@ -278,7 +287,7 @@ class JingdongStorageService {
 	 */
 	public function get_object($bucket,$key, $target, $auto_close=false,$other_headers=array()) {
 		$path = "/{$bucket}/{$key}";
-        $jss_request = new JSSRequest();  
+        $jss_request = new JSSRequest($this->host);  
         $jss_request->set_key_secret($this->access_key,$this->access_secret);      
 		$is_stream = false;
 		if ($target !== null) {
@@ -316,7 +325,7 @@ class JingdongStorageService {
 	public function get_object_resource($bucket,$key, $expire=300) {
 		$this->head_object($bucket,$key);
 		$path = "/{$bucket}/{$key}";
-        $jss_request = new JSSRequest();
+        $jss_request = new JSSRequest($this->host);
 		$jss_request->set_key_secret($this->access_key,$this->access_secret);
 		return $jss_request->generate_pre_signed_url("GET",$path,$expire);
 	}
@@ -553,7 +562,7 @@ class JingdongStorageService {
 	 * @return JSSResponse when success , throw Exceptions if any error.
 	 */
 	protected function make_request_with_path_and_params_split($method, $path, $query_params = array(),$request_headers=array()) {
-		$jss_request = new JSSRequest();
+		$jss_request = new JSSRequest($this->host);
 		$jss_request->set_key_secret($this->access_key,$this->access_secret);
 		$jss_request->set_header(CONTENT_LENGTH_TAG,0);
 		$this->debug_out($request_headers);
@@ -572,7 +581,7 @@ class JingdongStorageService {
      * @return code;
      */
     protected function post_or_put_request($method,$path, $source, $query_params=array(),$request_headers = array()) {
-    	$jss_request = new JSSRequest();
+    	$jss_request = new JSSRequest($this->host);
 		$jss_request->set_key_secret($this->access_key,$this->access_secret);
 		$jss_request->set_header($request_headers);
 		$jss_response=$jss_request->post_or_put_request($method,$path, $source, $query_params);
