@@ -19,6 +19,7 @@ define('EXPIRES_LOWER',strtolower(EXPIRES_TAG));
 define('SIGNATURE_TAG','Signature');
 define('ACCESSKEY_TAG','AccessKey');
 define('DEFAULT_USER_AGENT','JSS-SDK-PHP/1.0.0 (PHP 5.2.17; Linux 3.8.0-22-generic; HttpClient 4.2.1)');
+define('SEEK_TO_TAG',"SeekTo");
 
 class JSSRequest {
 	protected $method;
@@ -398,31 +399,25 @@ class JSSRequest {
     		$source_stream = $source;   	
     		$source_fstat = fstat($source);
     		$source_size = isset($source_fstat['size']) ? $source_fstat['size'] : 0;
-    		
-    	}
-    	elseif (is_string($source)) { // file upload
-    		clearstatcache();
-    		if (!is_file($source)) {
-    			throw new Exception("{$source} doesn't exist", 404);
-    		}
-    	
-    		$source_stream = fopen($source, 'rb');
-    		if (!$source_stream) {
-    			throw new Exception("Unable to read {$source}", 500);
-    		}  	
-    		$source_size = filesize($source);
-    	}
-    	elseif ($source === null) { // no content
+    	} elseif ($source === null) { // no content
     		$source_stream = null;
     	    $source_size = 0;  
     	} else {
+            $this->debug_out("Hey,what happened?");
     		throw new Exception('Unsupported source type!', 500);
     	}
-    	
+
+
+
     	if(empty($request_header) === false) {
     		$this->set_header($request_header);	
     	}
-    	
+
+        if (isset($request_header[SEEK_TO_TAG])) {
+            $seekTo = intval($request_header[SEEK_TO_TAG]);
+            fseek($source_stream,$seekTo,0);
+        }
+        $this->debug_out($request_header);
         $content_length = $this->get_header(CONTENT_LENGTH_TAG);
     	if(is_numeric($content_length)) {   //if $content_length is set,check weather $content_length is illegal
     		$content_length = intval($content_length);
@@ -448,17 +443,9 @@ class JSSRequest {
     					CURLOPT_INFILESIZE  => $source_size
     			));
     		}
-    	     
     		$jss_response = $this->exec_request();
-    		if (is_resource($source_stream)) {
-    			fclose($source_stream);
-    		}
     	
     	} catch (Exception $e){
-    		if (is_resource($source_stream)) {
-    			fclose($source_stream);
-    		}
-    	
     		throw $e;
     	}
     	return $jss_response;
@@ -537,7 +524,32 @@ class JSSRequest {
 		if($this->path[0]!='/') {
 			$this->path = '/'.$this->path;
 		}
-		$this->url = $this->host.$this->path;
+		//$this->url = $this->host.$this->path;
+		$tmpPath = trim($this->path,"/");
+		$tmpPaths = split("[?]",$tmpPath); //path?args
+		$arg = "";
+		if (count($tmpPaths) == 2) {
+			$arg = $tmpPaths[1];
+		}
+		
+		$pathInfo = split("/",$tmpPaths[0]);
+		$bucket = rawurlencode($pathInfo[0]);
+		$object ="";
+		if (count($pathInfo) > 1) {
+			$object = rawurlencode($pathInfo[1]);
+		}
+		
+	    $tmpPath = "/$bucket";
+	    if (empty($object) == false) {
+	    	$tmpPath = "$tmpPath/$object";
+	    } 	
+	    
+	    if (empty($arg) == false) {
+	    	$tmpPath = "$tmpPath?$arg";
+	    }
+		
+		$this->debug_out($tmpPath);
+		$this->url = $this->host.$tmpPath;
 		if (!empty ($query_params)) {
 			$params_str = http_build_query($query_params);
 			if (false === strstr($this->url, "?")) {
@@ -547,6 +559,8 @@ class JSSRequest {
 			}
 			$this->url .= $params_str;
 		}
+		
+		
 		return $this->url;
 	}
 	

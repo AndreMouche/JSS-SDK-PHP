@@ -1,9 +1,16 @@
 <?php
-/*
- * Created on 2013-7-26
+/**
+ * $ID: ListObjectsDemo $
++------------------------------------------------------------------
+ * @project JSS-PHP-SDK
+ * @create Created on 2013-07-29
++------------------------------------------------------------------
+
+ * 获取指定Bucket下所有Object列表
+×
+ * 如果成功则返回JSObject列表，否则抛出异常
+× 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
  *
- * To change the template for this generated file go to
- * Window - Preferences - PHPeclipse - PHP - Code Templates
  */
  
 require_once dirname(__FILE__).'/global.php';

@@ -1,10 +1,17 @@
 <?php
-/*
- * Created on 2013-7-26
+/**
+ * $ID: InitMultipartUploadDemo $
++------------------------------------------------------------------
+ * @project JSS-PHP-SDK
+ * @create Created on 2013-07-29
++------------------------------------------------------------------
+
+ * 初始化一个MultipartUpload对象，
+ * 若成功返回对象基本信息，否则抛出异常。
+× 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
  *
- * To change the template for this generated file go to
- * Window - Preferences - PHPeclipse - PHP - Code Templates
  */
+
 require_once dirname(__FILE__).'/global.php';
 
 function init_multipart_upload_test($bucket,$object_key) {

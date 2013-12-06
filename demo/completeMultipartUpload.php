@@ -1,19 +1,16 @@
 <?php
-/*
- * $ID: complete multipart upload $
+/**
+ * $ID: CompleteMultipartUploadDemo $
  +------------------------------------------------------------------
- * @project JSS
+ * @project JSS-PHP-SDK
  * @create Created on 2013-07-29
  +------------------------------------------------------------------
-
+ * 完成一个MUltipart upload
+ ×
+ * 如果成功则返回JSS_Response，否则抛出异常
  */
 require_once dirname(__FILE__).'/global.php';
 
-/*
- * 初始化一个MUltipart upload对象
- ×
- * 如果添加成功则返回该对象的基本信息（bucket,key,uploadid），否则抛出异常
- */
  
 function completeMultipartUpload_test($bucket,$object_key,$uploadid){
 	global $storage;
@@ -29,5 +26,5 @@ function completeMultipartUpload_test($bucket,$object_key,$uploadid){
 	}
 }
 
-$uploadid = '8f46c57290f042ea850aa2b9bf9ba0a2';
+$uploadid = '???';
 completeMultipartUpload_test($bucket,$mu_object_key,$uploadid);

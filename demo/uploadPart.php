@@ -1,24 +1,20 @@
 <?php
 /**
- * $ID: upload_part.php $
+ * $ID: UploadPartDemo $
  +------------------------------------------------------------------
- * @project JSS
+ * @project JSS-php-sdk
  * @create Created on 2013-07-29
  +------------------------------------------------------------------
-
- */
-require_once dirname(__FILE__).'/global.php';
-
-// 设定操作默认bucket
-
-/*
  * 上传Multipart upload的一个Part
- ×
+×
  * 如果上传成功则返回true，否则抛出异常
- × 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
+× 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
  *
  * 注意：同一MultipartUpload下相同partid的Part将会覆盖已经存在的Part内容！！！
  */
+
+require_once dirname(__FILE__).'/global.php';
+
 
 /*
  * 使用流的方式新建Upload part

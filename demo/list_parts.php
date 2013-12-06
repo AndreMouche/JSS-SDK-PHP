@@ -1,20 +1,18 @@
 <?php
 /**
- * $ID: list parts.php $
- +------------------------------------------------------------------
- * @project JSS
+ * $ID: ListPartsDemo $
++------------------------------------------------------------------
+ * @project JSS-PHP-SDK
  * @create Created on 2013-07-29
- +------------------------------------------------------------------
++------------------------------------------------------------------
 
+ * 获取指定uploadId下所有已上传的Part列表
+×
+ * 如果成功则返回ListPartsEntity列表，否则抛出异常
+× 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
+ *
  */
 require_once dirname(__FILE__).'/global.php';
-
-/*
- * 该操作用来列出一个MUltipart Upload中已经上传的Part
-×
-* 如果成功则返回Part列表，否则抛出异常
-× 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
-*/
 
 function list_parts_test($bucket,$key,$uploadId){
 	global $storage;
@@ -70,5 +68,5 @@ function list_parts_test2($bucket,$key,$uploadId){
 	}
 }
 
-$uploadid = '8f46c57290f042ea850aa2b9bf9ba0a2';
+$uploadid = '3134d9abc9084e46837b4ef3d652d603';
 list_parts_test($bucket,$mu_object_key,$uploadid);

@@ -77,6 +77,7 @@ class JingdongStorageService {
 	protected $debug;
 	
 	protected $host = 'http://storage.jcloud.com';
+	protected $use_batch_flow = true;
 	   
 
 	/**
@@ -172,21 +173,7 @@ class JingdongStorageService {
 		$jss_response = $this->make_request_with_path_and_params_split("DELETE",$name);
 		return $jss_response->check_response();
 	}
-     
-	/**
-	 * @unready now
-	 * Get bucket policy,corresponds to "GET Bucket Policy" in API
-	 * @param string $bucket  bucket's name
-	 * @return JSSResponse with bucket's policy as body on success 
-	 * @exception throw JSSError when policy not exists or response invalid
-	 */
-	private function get_bucket_policy($name) {
-		$bucket = trim($name,'/');
-		$path = "/{$bucket}?policy";
 
-		$jss_response = $this->make_request_with_path_and_params_split("GET", $path);
-		$jss_response->check_response();
-	}
 
 	/**
 	 * List all objects of specified bucket,corresponds to "GET Bucket" in API
@@ -250,12 +237,16 @@ class JingdongStorageService {
 			if (empty($objectname)) {
 				throw new Exception('$objectname must be supplied for resource type!', 500);
 			}
-            fseek($source,0,0);
+            $source_stream = $source;
+            //fseek($source,0,0);
 		}
 		elseif (is_string($source)) { // file upload			
 			if (empty($objectname)) {
-				$name = basename($source);
+                $objectname = basename($source);
 			}
+
+            $source_stream = $this->getSourceInfo($source);
+
 		}
 		
 		$set_content = false;
@@ -271,10 +262,113 @@ class JingdongStorageService {
 			$request_headers[CONTENT_TYPE_TAG] = $content_type;
 		}
 		$path = "/".$bucketname."/".$objectname;
-		$jss_response = $this->post_or_put_request("PUT", $path, $source,array(),$request_headers);
+		
+		$jss_response = $this->post_or_put_request("PUT", $path, $source_stream,array(),$request_headers);
+
+        if (is_string($source)) {
+            fclose($source_stream);
+        }
+		//printf($jss_response);
 		return $jss_response;
 	}
-    
+
+
+    /**
+     * Put object to storage with multipart upload
+     * @param string $bucketname,bucket's name
+     * @param string $objectname  object's name
+     * @param string $source  local file path(/path/to/filename.ext) or stream
+     * @param array $options headers,can be empty
+     * @return JSSResponse on success
+     * @exception see JSSError
+     */
+    public function put_mpu_object($bucketname,$objectname, $source, $options=array()) {
+        if (empty($objectname)) {
+            throw new Exception('$objectname must be supplied for resource type!', 500);
+        }
+
+        if (is_resource($source)) { // stream upload
+            fseek($source,0,0);
+            $source_stream = $source;
+            $source_fstat = fstat($source);
+            $source_size = isset($source_fstat['size']) ? $source_fstat['size'] : 0;
+
+        } elseif (is_string($source)) { // file upload
+            clearstatcache();
+            if (!is_file($source)) {
+                throw new Exception("{$source} doesn't exist", 404);
+            }
+
+            $source_stream = fopen($source, 'rb');
+            if (!$source_stream) {
+                throw new Exception("Unable to read {$source}", 500);
+            }
+            $source_size = filesize($source);
+        } else {
+            throw new Exception('Unsupported source type!', 500);
+        }
+
+
+        $options = $this->set_content_type($objectname,$options);
+
+       // Handle part size
+       if (isset($options['partSize'])) {
+            // If less that 5 MB...
+           if ((integer) $options['partSize'] < 5242880) {
+               $options['partSize'] = 5242880; // 5 MB
+           }
+           // If more than 500 MB...
+           elseif ((integer) $options['partSize'] > 524288000) {
+               $options['partSize'] = 524288000; // 500 MB
+           }
+        } else {
+           $options['partSize'] = 52428800; // 50 MB
+        }
+
+        // If the upload size is smaller than the piece size, failover to create_object().
+        if ($source_size < $options['partSize']) {
+        	$this->debug_out("file size is too small use put object instead.");
+            return $this->put_object($bucketname, $objectname, $source_stream,$options);
+        }
+
+
+        // Compose options for initiate_multipart_upload().
+        $_opt = array();
+        foreach (array(CONTENT_TYPE_TAG) as $param) {
+            if (isset($options[$param])) {
+               $_opt[$param] = $options[$param];
+            }
+        }
+
+        $upload = $this->init_multipart_upload($bucketname,$objectname,$_opt); //throw exception and return when failed.
+
+
+                    // Fetch the UploadId
+        $upload_id = $upload->get_uploadid();
+
+
+        // Get the list of pieces
+        $pieces = $this->get_multipart_counts($source_size, (integer) $options['partSize']);
+        $parts = array();
+       // Queue batch requests
+        foreach ($pieces as $i => $piece) {
+            $request_headers = array(
+                SEEK_TO_TAG => intval($piece['seekTo']),
+                CONTENT_LENGTH_TAG => intval($piece['length']),
+                'expect' => '100-continue',
+            );
+            $this->debug_out("upload part ".print_r($request_headers,true));
+            //throw exception when failed
+            $etag= $this->upload_part($bucketname,$objectname,$upload_id,($i+1),$source_stream,$request_headers);
+            $this->debug_out("upload part success,etag:".$etag);
+            $parts[]= array('PartNumber' => ($i + 1), 'ETag' => $etag);
+        }
+
+
+        return $this->complete_multipartupload($bucketname, $objectname, $upload_id, json_encode($parts));
+    }
+	
+
 	/**
 	 * Get object from storage(corresponds to "GET Object" in API)
 	 * @param string $bucket,bucket's name 
@@ -346,10 +440,9 @@ class JingdongStorageService {
 	}
 	
 	/**
-	 * Create new bucket,corresponds to "PUT Bucket" in API
-	 * @param string $name  bucket's name to create
-	 * @param string $options bucket's properties,
-	 * is useless now,future it may contains something like bucket's region,and so on
+	 *Initiate Multipart Upload "Init Multipart Upload" in API
+	 * @param string $bucket_name  bucket's name to create
+	 * @param string $object_key object's key,
 	 * @param array,request_headers,request header needed in init mulitpart upload,can be empty
 	 * @return MultipartUpload on success
 	 * @exception see JSSError
@@ -385,12 +478,17 @@ class JingdongStorageService {
 				);
 		$path = "/{$bucketname}/{$key}?".http_build_query($params);
 
-		$jss_response = $this->post_or_put_request("PUT", $path, $source,array(),$request_headers);
+        $source_stream = $this->getSourceInfo($source);
+
+		$jss_response = $this->post_or_put_request("PUT", $path, $source_stream,array(),$request_headers);
+        if (is_string($source)){
+            fclose($source_stream);
+        }
 		return $jss_response->get_header('ETag');
 	}
     
     /**
-	 * list parts
+	 * list parts of multipart upload
 	 * @param string,$bucket,bucket's name
 	 * @param string,$key,object's name
 	 * @param string $uploadId,the uploadid of the multipart upload
@@ -415,11 +513,11 @@ class JingdongStorageService {
 	}
 
     /**
-	 * complete multipartupload
+	 * complete a multipartupload
 	 * @param string $bucket
 	 * @param string $key
 	 * @param string $uploadid
-	 * @param string $complete_json,if is '',then we will get it by list_parts($uploadid) 
+	 * @param string $complete_json,can be empty.if is '',then we will get it by list_parts($uploadid)
 	 * @throws Exception when failed
 	 * @return $jss_response
 	 */
@@ -436,6 +534,7 @@ class JingdongStorageService {
 		$path = "/{$bucket}/{$key}?uploadId={$uploadid}";
 		$stream = fopen('data://text/plain,' . rawurlencode($complete_json), 'rb');
 		$jss_response = $this->post_or_put_request("POST",$path,$stream);
+        fclose($stream);
 		return $jss_response;
 	}
 	
@@ -450,7 +549,7 @@ class JingdongStorageService {
 	 */
 	public function abortMultipartUpload($bucket,$key,$uploadId){
 		$path = "/{$bucket}/{$key}?uploadId={$uploadId}";
-		$conn = $this->make_request_with_path_and_params_split('DELETE', $path);
+		$this->make_request_with_path_and_params_split('DELETE', $path);
 		return true;
 	}
 	
@@ -594,4 +693,60 @@ class JingdongStorageService {
 		    print_r("\n");
 		}
 	}
+
+
+    protected function getSourceInfo($source){
+        if (is_resource($source)) { // stream upload
+            return $source;
+        }
+        elseif (is_string($source)) { // file upload
+            clearstatcache();
+            if (!is_file($source)) {
+                throw new Exception("{$source} doesn't exist", 404);
+            }
+
+            $source_stream = fopen($source, 'rb');
+            if (!$source_stream) {
+                throw new Exception("Unable to read {$source}", 500);
+            }
+            return $source_stream;
+        } else {
+            $this->debug_out("Hey,what happened?");
+            throw new Exception('Unsupported source type!', 500);
+        }
+    }
+
+    protected function set_content_type($objectKey,$options=array()){
+        $set_content = false;
+        foreach($options as $key => $value) {
+            if(strcasecmp($key,CONTENT_TYPE_TAG) === 0) {
+                $set_content = true;
+                break;
+            }
+        }
+
+        if(false === $set_content) {
+            $pathinfo = pathinfo($objectKey);
+            $content_type = JSSMIME::get_type(isset($pathinfo['extension']) ? $pathinfo['extension'] : '');
+            $options[CONTENT_TYPE_TAG] = $content_type;
+        }
+        return $options;
+    }
+
+    protected function get_multipart_counts($filesize, $part_size) {
+        $i = 0;
+        $sizecount = $filesize;
+        $values = array();
+
+        while ($sizecount > 0) {
+            $sizecount -= $part_size;
+            $values[] = array(
+                'seekTo' => ($part_size * $i),
+                'length' => (($sizecount > 0) ? $part_size : ($sizecount + $part_size)),
+            );
+            $i++;
+        }
+
+        return $values;
+    }
 }

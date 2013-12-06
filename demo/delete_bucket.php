@@ -1,6 +1,10 @@
 <?php
-/*
- * Created on 2013-7-26
+/**
+ * $ID: DeleteBucketDemo $
+ +------------------------------------------------------------------
+ * @project JSS-PHP-SDK
+ * @create Created on 2013-07-29
+ +------------------------------------------------------------------
  * 删除bucket
  ×
  * 如果删除成功则返回true，否则抛出异常
@@ -8,6 +12,7 @@
  *
  * 注意：如果bucket内容非空则无法删除！！！
  */
+
  
 require_once dirname(__FILE__).'/global.php';
  
@@ -56,11 +61,11 @@ function delete_bucket_force($bucket) {
 	    print_r($jss_response->to_array());
 	
 	} catch (JSSError $e) {
-		jss_exception("Delete bucket({$bucket_name}) failed!",$e);
+		jss_exception("Delete bucket({$bucket}) failed!",$e);
 	} catch (Exception $e) {
-	    exception("Delete bucket({$bucket_name}) failed!", $e);
+	    exception("Delete bucket({$bucket}) failed!", $e);
 	}
 }
 
 delete_bucket_test($bucket);
-#delete_bucket_force($bucket);
+//delete_bucket_force($bucket);

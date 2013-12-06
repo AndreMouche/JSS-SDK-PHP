@@ -1,17 +1,20 @@
 <?php
-/*
- * Created on 2013-7-26
- *
- * To change the template for this generated file go to
- * Window - Preferences - PHPeclipse - PHP - Code Templates
- */
-require_once dirname(__FILE__).'/global.php';
-/*
+/**
+ * $ID: HeadObjectDemo $
++------------------------------------------------------------------
+ * @project JSS-PHP-SDK
+ * @create Created on 2013-07-29
++------------------------------------------------------------------
+
  * 获取object meta
- ×
+×
  * 如果object存在则返回JSSResponse，否则抛出异常
- × 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
+× 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
+ *
  */
+
+require_once dirname(__FILE__).'/global.php';
+
 
 function head_object_test($bucket_name,$key) {
     global $storage;	

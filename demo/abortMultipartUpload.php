@@ -1,23 +1,19 @@
 <?php
 /**
- * $ID: abort_multipartupload.php $
+ * $ID: AbortMultipartUploadDemo $
  +------------------------------------------------------------------
- * @project JSS
+ * @project JSS-PHP-SDK
  * @create Created on 2013-07-29
  +------------------------------------------------------------------
-
- */
-require_once dirname(__FILE__).'/global.php';
-
-
-
-
-/*
+ *
  * 终止一个MultipartUpload
  ×
  * 如果成功则返回true，否则抛出异常
  × 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
+ *
  */
+require_once dirname(__FILE__).'/global.php';
+
 function abort_multipart_uploadtest($bucket,$object_key,$uploadId) {
 	global $storage;
 	try {

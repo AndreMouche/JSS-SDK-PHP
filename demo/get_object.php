@@ -1,21 +1,22 @@
 <?php
-/*
- * Created on 2013-7-26
+/**
+ * $ID: GetObjectDemo $
++------------------------------------------------------------------
+ * @project JSS-PHP-SDK
+ * @create Created on 2013-07-29
++------------------------------------------------------------------
+
+ * 获取object
+×
+ * 如果获取成功则返回true，否则抛出异常
+× 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
  *
- * To change the template for this generated file go to
- * Window - Preferences - PHPeclipse - PHP - Code Templates
+ * 注意：首先，确保脚本对本地文件系统具有可写权限；其次，如果本地已存在同名文件，该操作将会覆盖本地文件内容！！！
+ *
  */
  
 require_once dirname(__FILE__).'/global.php';
- 
-/*
- * 获取object
- ×
- * 如果获取成功则返回true，否则抛出异常
- × 可以通过异常对象的getCode()方法和getMessage()方法获取对应的错误码和错误信息
- *
- * 注意：首先，确保脚本对本地文件系统具有可写权限；其次，如果本地已存在同名文件，该操作将会覆盖本地文件内容！！！
- */
+
 function get_object_test($bucket_name,$key) {
 	
 	global $storage;
