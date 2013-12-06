@@ -190,7 +190,10 @@ $options = array(
 $multipartUploadEntity = $storage->list_multipart_upload($bucket,$options);
 print_r($multipartUploadEntity->to_array());
 ```
-
+使用Multipart Upload创建Object
+```php
+    $jss_response = $storage->put_mpu_object($bucket,$object_key,$filePath);
+```
 ## Exception
 在访问云存储过程中，所有没有能够正常完成服务请求的操作，都会返回JSSError,该 Exception 是由 Exception 派生而来，JSSError的对象中，
 并会得出以下由存储服务器获得到的错误返回的响应：错误码，错误信息，请求资源，请求ID。例如在创建2次Bucket时候,代码如下
