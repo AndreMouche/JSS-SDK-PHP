@@ -250,7 +250,10 @@ class JSSRequest {
 		if (!empty ($this->last_curl_error)) {
 			throw new Exception($this->last_curl_error, 0);
 		}
-		
+
+        $this->debug_out("response&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
+        $this->debug_out($response);
+        $this->debug_out("response&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
         return $this->process_response($this->conn,$response);
         
 	}
@@ -519,37 +522,52 @@ class JSSRequest {
 		return $meta;
 		
 	}
-	
+
+    protected function get_encoded_url(){
+        if($this->path[0]!='/') {
+            $this->path = '/'.$this->path;
+        }
+
+        //$this->url = $this->host.$this->path;
+        $argOffset = strpos($this->path,"?");
+        if ($argOffset == false) {
+            $arg = "";
+            $tmpPath = substr($this->path,1);  //rm prefix "/"
+        } else {
+            $arg = substr($this->path,$argOffset+1);
+            $tmpPath = substr($this->path,1,$argOffset-1);  //rm prefix "/"
+        }
+
+        $bOffSet = strpos($tmpPath,"/");
+        if ($bOffSet == false) {
+            $bucket = $tmpPath;
+            $object = "";
+        } else {
+            $bucket = substr($tmpPath,0,$bOffSet);
+            $object = substr($tmpPath,$bOffSet+1);
+        }
+        $realPath = "/";
+        if (strlen($bucket) > 0) {
+            $realPath .= rawurlencode($bucket);
+        }
+
+        if (strlen($object) > 0) {
+            $object = str_replace(rawurlencode("/"),"/",rawurlencode($object));
+            //$realPath .= "/".rawurlencode($object);
+            $realPath .= "/".$object;
+        }
+
+        if (strlen($arg) > 0) {
+           $realPath .= "?".$arg;
+        }
+
+        $this->debug_out("realPath:".$realPath);
+        $this->url = $this->host.$realPath;
+    }
+
 	protected function get_url_with_params($query_params = array()){
-		if($this->path[0]!='/') {
-			$this->path = '/'.$this->path;
-		}
-		//$this->url = $this->host.$this->path;
-		$tmpPath = trim($this->path,"/");
-		$tmpPaths = split("[?]",$tmpPath); //path?args
-		$arg = "";
-		if (count($tmpPaths) == 2) {
-			$arg = $tmpPaths[1];
-		}
-		
-		$pathInfo = split("/",$tmpPaths[0]);
-		$bucket = rawurlencode($pathInfo[0]);
-		$object ="";
-		if (count($pathInfo) > 1) {
-			$object = rawurlencode($pathInfo[1]);
-		}
-		
-	    $tmpPath = "/$bucket";
-	    if (empty($object) == false) {
-	    	$tmpPath = "$tmpPath/$object";
-	    } 	
-	    
-	    if (empty($arg) == false) {
-	    	$tmpPath = "$tmpPath?$arg";
-	    }
-		
-		$this->debug_out($tmpPath);
-		$this->url = $this->host.$tmpPath;
+        $this->get_encoded_url();
+
 		if (!empty ($query_params)) {
 			$params_str = http_build_query($query_params);
 			if (false === strstr($this->url, "?")) {
